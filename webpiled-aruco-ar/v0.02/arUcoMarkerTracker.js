@@ -39,47 +39,52 @@ class ArUcoMarkerTracker
 
             var args = event.data;
 
-            var buf = this.markerTrackerModule._malloc(args.imageData.length * args.imageData.BYTES_PER_ELEMENT);
-            this.markerTrackerModule.HEAPU8.set(args.imageData, buf);
-            var numMarkers = this.markerTrackerModule._process_image(args.width, args.height, buf, 1);
-            this.markerTrackerModule._free(buf);
-
-            markers = [];
-            var offset = 0;
-            var id = 0;
-            var tx = 0.0;
-            var ty = 0.0;
-            var tz = 0.0;
-            var rx = 0.0;
-            var ry = 0.0;
-            var rz = 0.0;
-            for (var markerIdx = 0; markerIdx < numMarkers; markerIdx++) {
-                var ptr = this.markerTrackerModule._get_tracked_marker(markerIdx);
-
-                offset = 0;
-                id = this.markerTrackerModule.getValue(ptr + offset, "i32");
-                offset += 12;
-                tx = this.markerTrackerModule.getValue(ptr + offset, "double");
-                offset += 8;
-                ty = this.markerTrackerModule.getValue(ptr + offset, "double");
-                offset += 8;
-                tz = this.markerTrackerModule.getValue(ptr + offset, "double");
-                offset += 8;
-                rx = this.markerTrackerModule.getValue(ptr + offset, "double");
-                offset += 8;
-                ry = this.markerTrackerModule.getValue(ptr + offset, "double");
-                offset += 8;
-                rz = this.markerTrackerModule.getValue(ptr + offset, "double");
-
-                markers.push({
-                    id: id,
-                    tx: tx,
-                    ty: ty,
-                    tz: tz,
-                    rx: rx,
-                    ry: ry,
-                    rz: rz
-                })
+            if (args.reset) {
+                markerTracker._reset();
+            }
+            else {
+                var buf = this.markerTrackerModule._malloc(args.imageData.length * args.imageData.BYTES_PER_ELEMENT);
+                this.markerTrackerModule.HEAPU8.set(args.imageData, buf);
+                var numMarkers = this.markerTrackerModule._process_image(args.width, args.height, buf, 1);
+                this.markerTrackerModule._free(buf);
+    
+                markers = [];
+                var offset = 0;
+                var id = 0;
+                var tx = 0.0;
+                var ty = 0.0;
+                var tz = 0.0;
+                var rx = 0.0;
+                var ry = 0.0;
+                var rz = 0.0;
+                for (var markerIdx = 0; markerIdx < numMarkers; markerIdx++) {
+                    var ptr = this.markerTrackerModule._get_tracked_marker(markerIdx);
+    
+                    offset = 0;
+                    id = this.markerTrackerModule.getValue(ptr + offset, "i32");
+                    offset += 12;
+                    tx = this.markerTrackerModule.getValue(ptr + offset, "double");
+                    offset += 8;
+                    ty = this.markerTrackerModule.getValue(ptr + offset, "double");
+                    offset += 8;
+                    tz = this.markerTrackerModule.getValue(ptr + offset, "double");
+                    offset += 8;
+                    rx = this.markerTrackerModule.getValue(ptr + offset, "double");
+                    offset += 8;
+                    ry = this.markerTrackerModule.getValue(ptr + offset, "double");
+                    offset += 8;
+                    rz = this.markerTrackerModule.getValue(ptr + offset, "double");
+    
+                    markers.push({
+                        id: id,
+                        tx: tx,
+                        ty: ty,
+                        tz: tz,
+                        rx: rx,
+                        ry: ry,
+                        rz: rz
+                    })
+                }
             }
 
             postMessage({ markers: markers });
@@ -93,6 +98,7 @@ class ArUcoMarkerTracker
             var jsUrl = GetLocation() + "/webpiled-aruco-ar/webpiled-aruco-ar.js";
             var wasmUrl = GetLocation() + "/webpiled-aruco-ar/webpiled-aruco-ar.wasm";
             CreateWebAssemblyModule(jsUrl, wasmUrl).then(function (markerTracker) {
+                markerTracker._reset();
                 this.markerTrackerModule = markerTracker;
             });
         }]);
