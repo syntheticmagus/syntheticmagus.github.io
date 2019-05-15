@@ -127,7 +127,7 @@ class ArUcoMarkerTracker
 
         var promise = new Promise(function (resolve) {
             tracker.onmessage = function (event) {
-                resolve(event.markers);
+                resolve(event.data.markers);
             };
         });
 
