@@ -124,6 +124,7 @@ class ArUcoMarkerTracker
     }
 
     setCalibration(width, height) {
+        var tracker = this._markerTrackingWorker;
         var promise = new Promise(function (resolve) {
             tracker.onmessage = function () {
                 resolve();
