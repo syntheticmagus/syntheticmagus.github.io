@@ -42,7 +42,11 @@ class ArUcoMarkerTracker
             if (args.reset) {
                 markerTracker._reset();
             }
-            else {
+            else if (args.calibrate) {
+                this.markerTrackerModule._set_calibration_from_frame_size(args.width, args.height);
+                postMessage({});
+            }
+            else if (args.track) {
                 var buf = this.markerTrackerModule._malloc(args.imageData.length * args.imageData.BYTES_PER_ELEMENT);
                 this.markerTrackerModule.HEAPU8.set(args.imageData, buf);
                 var numMarkers = this.markerTrackerModule._process_image(args.width, args.height, buf, 1);
@@ -83,11 +87,11 @@ class ArUcoMarkerTracker
                         rx: rx,
                         ry: ry,
                         rz: rz
-                    })
+                    });
                 }
-            }
 
-            postMessage({ markers: markers });
+                postMessage({ markers: markers });
+            }
         }
 
         var getLocationFunction = "function GetLocation() { return \"" + location + "\"; }";
@@ -119,6 +123,22 @@ class ArUcoMarkerTracker
         this._markerTrackingWorker = worker;
     }
 
+    setCalibration(width, height) {
+        var promise = new Promise(function (resolve) {
+            tracker.onmessage = function () {
+                resolve();
+            };
+        });
+
+        this._markerTrackingWorker.postMessage({
+            calibrate: true,
+            width: width,
+            height: height
+        });
+
+        return promise;
+    }
+
     findMarkersInImage(videoTexture) {
         var width = videoTexture.getSize().width;
         var height = videoTexture.getSize().height;
@@ -132,6 +152,7 @@ class ArUcoMarkerTracker
         });
 
         this._markerTrackingWorker.postMessage({
+            track: true,
             width: width,
             height: height,
             imageData: new Uint8Array(imageData)
