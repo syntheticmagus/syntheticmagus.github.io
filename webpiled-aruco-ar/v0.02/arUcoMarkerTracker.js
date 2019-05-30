@@ -165,6 +165,48 @@ class ArUcoMarkerTracker
 
 // DEBUG: Draft Babylon.js API below.
 
+class FilteredVector3 extends BABYLON.Vector3 {
+    constructor(x, y, z, sampleCount = 10) {
+        super(x, y, z);
+
+        this._idx = 0;
+        this._samples = [];
+        this._sampleSquaredDistances = [];
+        for (var idx = 0; idx < sampleCount; ++idx) {
+            this._samples.push(new BABYLON.Vector3(x, y, z));
+            this._sampleSquaredDistances.push(0.0);
+        }
+
+        this._sampleAverage = new BABYLON.Vector3(x, y, z);
+    }
+
+    addSample(sample) {
+        this._sampleAverage.scaleInPlace(this._samples.length);
+        this._sampleAverage.subtractInPlace(this._samples[this._idx]);
+        this._samples[this._idx].copyFrom(sample);
+        this._sampleAverage.addInPlace(this._samples[this._idx]);
+        this._sampleAverage.scaleInPlace(1.0 / this._samples.length);
+        this._idx = (this._idx + 1) % this._samples.length;
+
+        var avgSquaredDistance = 0.0;
+        for (var idx = 0; idx < this._samples.length; ++idx) {
+            this._sampleSquaredDistances[idx] = BABYLON.Vector3.DistanceSquared(this._sampleAverage, this._samples[idx]);
+            avgSquaredDistance += this._sampleSquaredDistances[idx];
+        }
+        avgSquaredDistance /= this._samples.length;
+
+        var numIncludedSamples = 0;
+        this.set(0.0, 0.0, 0.0);
+        for (var idx = 0; idx <= this._samples.length; ++idx) {
+            if (this._sampleSquaredDistances[idx] <= avgSquaredDistance) {
+                this.addInPlace(this._samples[idx]);
+                numIncludedSamples += 1;
+            }
+        }
+        this.scaleInPlace(1.0 / numIncludedSamples);
+    }
+}
+
 class TrackedNode extends BABYLON.TransformNode {
     constructor(name, scene, disableWhenNotTracked = true) {
         super(name, scene, true);
@@ -219,6 +261,9 @@ class ArUcoMetaMarkerObjectTracker {
         this.__forwardEstimate = BABYLON.Vector3.Zero();
         this.__forwardEstimateCount = 0.0;
         this.__scratchVec = BABYLON.Vector3.Zero();
+        this.__filteredPos = new FilteredVector3(0.0, 0.0, 0.0);
+        this.__filteredRight = new FilteredVector3(0.0, 0.0, 0.0);
+        this.__filteredForward = new FilteredVector3(0.0, 0.0, 0.0);
         this.__targetPosition = BABYLON.Vector3.Zero();
         this.__targetRotation = BABYLON.Quaternion.Identity();
         this.__ulId = -1;
@@ -319,11 +364,15 @@ class ArUcoMetaMarkerObjectTracker {
                 this.__rightEstimate.scaleInPlace(1.0 / this.__rightEstimateCount);
                 this.__forwardEstimate.scaleInPlace(1.0 / this.__forwardEstimateCount);
 
-                this.__targetPosition.copyFrom(this.__posEstimate);
+                this.__filteredPos.addSample(this.__posEstimate);
+                this.__filteredRight.addSample(this.__rightEstimate);
+                this.__filteredForward.addSample(this.__forwardEstimate);
+
+                this.__targetPosition.copyFrom(this.__filteredPos);
                 BABYLON.Quaternion.RotationQuaternionFromAxisToRef(
-                    this.__rightEstimate, 
-                    BABYLON.Vector3.Cross(this.__forwardEstimate, this.__rightEstimate), 
-                    this.__forwardEstimate,
+                    this.__filteredRight, 
+                    BABYLON.Vector3.Cross(this.__filteredForward, this.__filteredRight), 
+                    this.__filteredForward,
                     this.__targetRotation);
 
                 this._trackableObjects[descriptor].setTracking(
