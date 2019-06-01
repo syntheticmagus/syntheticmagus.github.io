@@ -217,6 +217,9 @@ class TrackedNode extends BABYLON.TransformNode {
             this.setEnabled(false);
         }
 
+        // TODO: Remove this feature, which only exists as a stopgap.
+        this._notTrackedFramesCount = 10;
+
         this.onTrackingAcquiredObservable = new BABYLON.Observable(observer => {
             if (this._isTracking) {
                 this.onTrackingAcquiredObservable.notifyObserver(observer, this);
@@ -234,6 +237,17 @@ class TrackedNode extends BABYLON.TransformNode {
     setTracking(position, rotation, isTracking) {
         this.position.copyFrom(position);
         this.rotationQuaternion.copyFrom(rotation);
+
+        // TODO: Remove this feature, which only exists as a stopgap.
+        if (isTracking) {
+            this._notTrackedFramesCount = 0;
+        }
+        else {
+            this._notTrackedFramesCount += 1;
+            if (this._notTrackedFramesCount < 5) {
+                isTracking = true;
+            }
+        }
 
         if (!this._isTracking && isTracking) {
             this.onTrackingAcquiredObservable.notifyObservers(this);
