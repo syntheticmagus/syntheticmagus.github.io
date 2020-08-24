@@ -77,18 +77,18 @@
                         0.5 + 0.5 * Math.random(),
                         0.5 + 0.5 * Math.random(),
                         0.5 + 0.5 * Math.random(),
-                        0.5));
+                        1));
                     particleSystem.addColorGradient(1.0, new BABYLON.Color4(
                         0.5 + 0.5 * Math.random(),
                         0.5 + 0.5 * Math.random(),
                         0.5 + 0.5 * Math.random(),
-                        0));
+                        1));
                     particleSystem.addSizeGradient(0.0, 0.3);
                     particleSystem.addSizeGradient(0.2, 0.2);
                     particleSystem.addSizeGradient(1.0, 0.001);
                     particleSystem.targetStopDuration = 0.4;
                     particleSystem.disposeOnStop = true;
-                    particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_MULTIPLYADD;
+                    particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
                     particleSystem.start();
                 }
 
@@ -97,14 +97,14 @@
                     "camera",
                     0,
                     0.9 * Math.PI / 2,
-                    12,
+                    20,
                     BABYLON.Vector3.Zero(),
                     scene,
                     true);
 
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                 scene.onBeforeRenderObservable.add(() => {
-                    camera.alpha += 0.003 * scene.getAnimationRatio();
+                    camera.alpha += 0.005 * scene.getAnimationRatio();
                 });
 
                 // Fireworks assets and behavior logic
@@ -123,9 +123,9 @@
                     var center = new BABYLON.Vector3();
                     return () => {
                         center.copyFromFloats(
+                            10 * Math.random() - 5,
                             6 * Math.random() - 3,
-                            2 * Math.random() - 1,
-                            6 * Math.random() - 3);
+                            10 * Math.random() - 5);
                         createBurstParticleSystem(center, texture.clone());
                         bangSound.play();
                     };
