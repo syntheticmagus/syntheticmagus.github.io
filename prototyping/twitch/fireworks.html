@@ -1,0 +1,220 @@
+<html>
+
+<head>
+    <title>Fireworks!</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    </style>
+    <script
+        src="https://gitcdn.xyz/cdn/tmijs/cdn/e59ebeab0b5eb22e7bff9e053d8dbad58e7d030f/latest/1.x/tmi.min.js"></script>
+</head>
+
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+
+            // Handle params.
+            let behavior = undefined;
+            let channel = undefined;
+            let command = undefined;
+            let subscription = false;
+            let debug = false;
+            const params = new URLSearchParams(window.location.search);
+            if (params.has("channel")) {
+                behavior = "chatbot";
+                channel = params.get("channel");
+                console.log("Tailing channel " + channel);
+            } else {
+                behavior = "demo";
+                console.log("Defaulting to demo behavior");
+            }
+            if (params.has("command")) {
+                command = "!" + params.get("command");
+                console.log("Enabling manual firework launch using command \"" + command + "\"")
+            }
+            if (params.has("subscription")) {
+                subscription = true;
+                console.log("Enabling fanfare for subs and resubs");
+            }
+            if (params.has("debug")) {
+                debug = true;
+                console.log("Enabling debug");
+            }
+
+            // Stet up Babylon stuff
+            var canvas = document.getElementById('renderCanvas');
+            var engine = new BABYLON.Engine(canvas, true);
+
+            var createScene = function () {
+
+                function createBurstParticleSystem(position, texture) {
+                    var particleSystem = new BABYLON.ParticleHelper.CreateDefault(position, 500);
+                    particleSystem.particleTexture = texture;
+                    particleSystem.createSphereEmitter(0.5);
+                    particleSystem.minLifeTime = 1.0;
+                    particleSystem.maxLifeTime = 1.5;
+                    particleSystem.emitRate = 5000;
+                    particleSystem.minEmitPower = 3;
+                    particleSystem.maxEmitPower = 5;
+                    particleSystem.minSize = 0.3;
+                    particleSystem.maxSize = 0.6;
+                    particleSystem.addColorGradient(0.0, new BABYLON.Color4(
+                        0.5 + 0.5 * Math.random(),
+                        0.5 + 0.5 * Math.random(),
+                        0.5 + 0.5 * Math.random(),
+                        0.5));
+                    particleSystem.addColorGradient(1.0, new BABYLON.Color4(
+                        0.5 + 0.5 * Math.random(),
+                        0.5 + 0.5 * Math.random(),
+                        0.5 + 0.5 * Math.random(),
+                        0));
+                    particleSystem.addSizeGradient(0.0, 0.3);
+                    particleSystem.addSizeGradient(0.2, 0.2);
+                    particleSystem.addSizeGradient(1.0, 0.001);
+                    particleSystem.targetStopDuration = 0.4;
+                    particleSystem.disposeOnStop = true;
+                    particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_MULTIPLYADD;
+                    particleSystem.start();
+                }
+
+                var scene = new BABYLON.Scene(engine);
+                var camera = new BABYLON.ArcRotateCamera(
+                    "camera",
+                    0,
+                    0.9 * Math.PI / 2,
+                    12,
+                    BABYLON.Vector3.Zero(),
+                    scene,
+                    true);
+
+                scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+                scene.onBeforeRenderObservable.add(() => {
+                    camera.alpha += 0.003 * scene.getAnimationRatio();
+                });
+
+                // Fireworks assets and behavior logic
+                new Promise(resolve => {
+                    // Create the bang sound.
+                    var bangSound = new BABYLON.Sound(
+                        "bangSound",
+                        "https://playground.babylonjs.com/sounds/gunshot.wav",
+                        scene,
+                        () => resolve(bangSound));
+                }).then(bangSound => {
+                    // Create the firework function
+                    bangSound.setVolume(0.2);
+
+                    var texture = new BABYLON.Texture("https://playground.babylonjs.com/textures/Dot.png", scene);
+                    var center = new BABYLON.Vector3();
+                    return () => {
+                        center.copyFromFloats(
+                            6 * Math.random() - 3,
+                            2 * Math.random() - 1,
+                            6 * Math.random() - 3);
+                        createBurstParticleSystem(center, texture.clone());
+                        bangSound.play();
+                    };
+                }).then(firework => {
+                    // Create requested behavior
+                    switch (behavior) {
+                        case "demo":
+                            // Demo behavior creates a tail-recursing "fireworks display." Requires a non-white
+                            // clear color since nothing is expected to be in the background.
+                            scene.clearColor = BABYLON.Color3.Black();
+                            const fireworksDisplay = () => {
+                                firework();
+                                if (!scene.isDisposed) {
+                                    BABYLON.Tools.DelayAsync(Math.random() * 1000).then(fireworksDisplay);
+                                }
+                            };
+                            fireworksDisplay();
+                            break;
+                        case "chatbot":
+                            // Chatbot behavior tails a Twitch channel using TMI and launches fireworks based 
+                            // on chat messages, optionally requiring a match to a command.
+                            const client = new tmi.Client({
+                                options: { debug: debug },
+                                connection: {
+                                    reconnect: true,
+                                    secure: true
+                                },
+                                channels: [channel]
+                            });
+                            client.connect().catch(console.error);
+
+                            client.on('message', (channel, tags, message, self) => {
+                                if (self) return;
+
+                                message = message.trim();
+                                if (command === undefined || command === message) {
+                                    firework();
+                                }
+                            });
+
+                            if (command !== undefined) {
+                                client.on('message', (channel, tags, message, self) => {
+                                    if (self) return;
+
+                                    if (message.trim() === command) {
+                                        firework();
+                                    }
+                                });
+                            }
+
+                            if (subscription) {
+                                const fanfare = (remainingTime) => {
+                                    firework();
+                                    if (!scene.isDisposed && remainingTime > 0) {
+                                        const delay = Math.random() * 500;
+                                        BABYLON.Tools.DelayAsync(delay).then(() => {
+                                            fanfare(remainingTime - delay);
+                                        });
+                                    }
+                                };
+                                client.on("subscription", (channel, username, method, message, userstate) => {
+                                    fanfare(10000);
+                                });
+                                client.on("resub", (channel, username, months, message, userstate, methods) => {
+                                    // TODO: Extend fanfare by 1 second per month? Could be fun.
+                                    // let cumulativeMonths = ~~userstate["msg-param-cumulative-months"];
+                                    fanfare(10000);
+                                });
+                            }
+                            break;
+                    }
+                });
+
+                if (debug) {
+                    scene.debugLayer.show();
+                }
+
+                return scene;
+            };
+            var scene = createScene();
+            engine.runRenderLoop(function () {
+                scene.render();
+            });
+
+            window.addEventListener('resize', function () {
+                engine.resize();
+            });
+        });
+    </script>
+</body>
+
+</html>
