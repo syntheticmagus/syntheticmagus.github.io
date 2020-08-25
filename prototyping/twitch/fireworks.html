@@ -194,6 +194,15 @@
                                     // let cumulativeMonths = ~~userstate["msg-param-cumulative-months"];
                                     fanfare(10000);
                                 });
+                                client.on("subgift", (channel, username, streakMonths, recipient, methods, userstate) => {
+                                    fanfare(10000);
+                                });
+                                client.on("submysterygift", (channel, username, numbOfSubs, methods, userstate) => {
+                                    fanfare(10000);
+                                });
+                                client.on("cheer", (channel, userstate, message) => {
+                                    fanfare(userstate.bits * 10);
+                                });
                             }
                             break;
                     }
