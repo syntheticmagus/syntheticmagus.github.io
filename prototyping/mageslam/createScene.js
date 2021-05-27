@@ -38,6 +38,7 @@ var createScene = async function (engine, canvas) {
         }, BABYLON.PointerEventTypes.POINTERPICK);
 
         const slam = await Microsoft.MageSlam.CreateAsync(ANote0VideoVidTex);
+        await BABYLON.Tools.DelayAsync(1000);
         slam.startTracking();
     });
 
