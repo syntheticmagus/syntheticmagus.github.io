@@ -16,27 +16,30 @@ var createScene = async function (engine, canvas) {
 	var ANote0Video = BABYLON.MeshBuilder.CreatePlane("plane", planeOpts, scene);
 	var vidPos = (new BABYLON.Vector3(0,0,0.1))
     ANote0Video.position = vidPos;
-	var ANote0VideoMat = new BABYLON.StandardMaterial("m", scene);
-	var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex","bananas.mp4", scene);
-    ANote0VideoVidTex.video.playbackRate = 0.25;
-    ANote0VideoVidTex.video.loop = false;
-	ANote0VideoMat.diffuseTexture = ANote0VideoVidTex;
-	ANote0VideoMat.roughness = 1;
-	ANote0VideoMat.emissiveColor = new BABYLON.Color3.White();
-	ANote0Video.material = ANote0VideoMat;
-	scene.onPointerObservable.add(function(evt){
-			if(evt.pickInfo.pickedMesh === ANote0Video){
-                //console.log("picked");
-					if(ANote0VideoVidTex.video.paused)
-						ANote0VideoVidTex.video.play();
-					else
-						ANote0VideoVidTex.video.pause();
-                    console.log(ANote0VideoVidTex.video.paused?"paused":"playing");
-			}
-	}, BABYLON.PointerEventTypes.POINTERPICK);
 
-    const slam = await Microsoft.MageSlam.CreateAsync(ANote0VideoVidTex);
-    slam.startTracking();
+    BABYLON.Tools.DelayAsync(5000).then(async function() {
+        var ANote0VideoMat = new BABYLON.StandardMaterial("m", scene);
+        var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex","bananas.mp4", scene);
+        ANote0VideoVidTex.video.playbackRate = 0.25;
+        ANote0VideoVidTex.video.loop = false;
+        ANote0VideoMat.diffuseTexture = ANote0VideoVidTex;
+        ANote0VideoMat.roughness = 1;
+        ANote0VideoMat.emissiveColor = new BABYLON.Color3.White();
+        ANote0Video.material = ANote0VideoMat;
+        scene.onPointerObservable.add(function(evt){
+                if(evt.pickInfo.pickedMesh === ANote0Video){
+                    //console.log("picked");
+                        if(ANote0VideoVidTex.video.paused)
+                            ANote0VideoVidTex.video.play();
+                        else
+                            ANote0VideoVidTex.video.pause();
+                        console.log(ANote0VideoVidTex.video.paused?"paused":"playing");
+                }
+        }, BABYLON.PointerEventTypes.POINTERPICK);
+
+        const slam = await Microsoft.MageSlam.CreateAsync(ANote0VideoVidTex);
+        slam.startTracking();
+    });
 
     //console.log(ANote0Video);
     return scene;
